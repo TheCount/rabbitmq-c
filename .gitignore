@@ -68,3 +68,12 @@ tools/doc/man-date.ent
 *.sw?
 .#*
 \#*#
+
+# Ignore debian files
+/obj-*
+/debian/*
+!/debian/changelog
+!/debian/compat
+!/debian/control
+!/debian/*.install
+!/debian/rules
