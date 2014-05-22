@@ -15,4 +15,12 @@
 .PHONY: override_dh_strip
 
 override_dh_strip:
-	dh_strip --dbg-package=librabbitmq3-dbg
+	dh_strip -k
+	install -d debian/librabbitmq1-dbg/usr/lib/debug
+	cp -a debian/librabbitmq1/usr/lib/debug/. debian/librabbitmq1-dbg/usr/lib/debug/.
+	rm -Rf debian/librabbitmq1/usr/lib/debug
+	-rmdir -p debian/librabbitmq1/usr/lib
+	install -d debian/librabbitmq-tools-dbg/usr/lib/debug
+	cp -a debian/librabbitmq-tools/usr/lib/debug/. debian/librabbitmq-tools-dbg/usr/lib/debug/.
+	rm -Rf debian/librabbitmq-tools/usr/lib/debug
+	-rmdir -p debian/librabbitmq-tools/usr/lib

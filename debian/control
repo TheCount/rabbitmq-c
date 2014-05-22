@@ -8,17 +8,39 @@ Homepage: https://github.com/alanxz/rabbitmq-c
 #Vcs-Git: git://git.debian.org/collab-maint/librabbitmq.git
 #Vcs-Browser: http://git.debian.org/?p=collab-maint/librabbitmq.git;a=summary
 
+Package: librabbitmq-tools
+Section: net
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: RabbitMQ C AMQP client library (tools)
+ librabbitmq is a C-language client library for use with v2.0+ of the
+ RabbitMQ broker <http://www.rabbitmq.com>.
+ .
+ This package contains the amqp-declare-queue, amqp-delete-queue,
+ amqp-publish, amqp-consume, and amqp-get tools.
+
+Package: librabbitmq-tools-dbg
+Section: debug
+Architecture: any
+Pre-Depends: ${misc:Pre-Depends}
+Depends: librabbitmq-tools (= ${binary:Version})
+Description: RabbitMQ C AMQP client library (tools debug)
+ librabbitmq is a C-language client library for use with v2.0+ of the
+ RabbitMQ broker <http://www.rabbitmq.com>.
+ .
+ This package contains the debugging symbols for librabbitmq-tools.
+
 Package: librabbitmq-dev
 Section: libdevel
 Architecture: any
-Depends: librabbitmq3 (= ${binary:Version})
+Depends: librabbitmq1 (= ${binary:Version})
 Description: RabbitMQ C AMQP client library (development)
  librabbitmq is a C-language client library for use with v2.0+ of the
  RabbitMQ broker <http://www.rabbitmq.com>.
  .
  This package contains the development files for librabbitmq.
 
-Package: librabbitmq3
+Package: librabbitmq1
 Section: libs
 Architecture: any
 Pre-Depends: ${misc:Pre-Depends}
@@ -27,13 +49,13 @@ Description: RabbitMQ C AMQP client library
  librabbitmq is a C-language client library for use with v2.0+ of the
  RabbitMQ broker <http://www.rabbitmq.com>.
 
-Package: librabbitmq3-dbg
+Package: librabbitmq1-dbg
 Section: debug
 Architecture: any
 Pre-Depends: ${misc:Pre-Depends}
-Depends: librabbitmq3 (= ${binary:Version})
+Depends: librabbitmq1 (= ${binary:Version})
 Description: RabbitMQ C AMQP client library (debug)
  librabbitmq is a C-language client library for use with v2.0+ of the
  RabbitMQ broker <http://www.rabbitmq.com>.
  .
- This package contains the debugging symbols for librabbitmq.
+ This package contains the debugging symbols for librabbitmq1.
