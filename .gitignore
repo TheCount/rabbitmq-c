@@ -76,6 +76,7 @@ tools/doc/man-date.ent
 !/debian/compat
 !/debian/control
 !/debian/copyright
+!/debian/*.docs
 !/debian/*.install
 !/debian/*.manpages
 !/debian/rules
