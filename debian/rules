@@ -1,0 +1,26 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+# Sample debian/rules that uses debhelper.
+# This file was originally written by Joey Hess and Craig Small.
+# As a special exception, when this file is copied by dh-make into a
+# dh-make output file, you may use that output file without restriction.
+# This special exception was added by Craig Small in version 0.37 of dh-make.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+%:
+	dh $@
+
+.PHONY: override_dh_strip
+
+override_dh_strip:
+	dh_strip -k
+	install -d debian/librabbitmq1-dbg/usr/lib/debug
+	cp -a debian/librabbitmq1/usr/lib/debug/. debian/librabbitmq1-dbg/usr/lib/debug/.
+	rm -Rf debian/librabbitmq1/usr/lib/debug
+	-rmdir -p debian/librabbitmq1/usr/lib
+	install -d debian/librabbitmq-tools-dbg/usr/lib/debug
+	cp -a debian/librabbitmq-tools/usr/lib/debug/. debian/librabbitmq-tools-dbg/usr/lib/debug/.
+	rm -Rf debian/librabbitmq-tools/usr/lib/debug
+	-rmdir -p debian/librabbitmq-tools/usr/lib
