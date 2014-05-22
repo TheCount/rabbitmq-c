@@ -46,6 +46,7 @@ examples/amqps_producer
 examples/amqps_sendstring
 examples/amqps_unbind
 librabbitmq.pc
+/obj-*
 test-driver
 tests/*.log
 tests/*.trs
