@@ -1,0 +1,5 @@
+librabbitmq (0.5.0-1) unstable; urgency=low
+
+  * Initial release
+
+ -- Alexander Klauer <Alexander.Klauer@itwm.fraunhofer.de>  Wed, 21 May 2014 15:38:08 +0000

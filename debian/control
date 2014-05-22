@@ -1,0 +1,39 @@
+Source: librabbitmq
+Priority: extra
+Maintainer: Alexander Klauer <Alexander.Klauer@itwm.fraunhofer.de>
+Build-Depends: debhelper (>= 8.0.0), cmake
+Standards-Version: 3.9.3
+Section: libs
+Homepage: https://github.com/alanxz/rabbitmq-c
+#Vcs-Git: git://git.debian.org/collab-maint/librabbitmq.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/librabbitmq.git;a=summary
+
+Package: librabbitmq-dev
+Section: libdevel
+Architecture: any
+Depends: librabbitmq3 (= ${binary:Version})
+Description: RabbitMQ C AMQP client library (development)
+ librabbitmq is a C-language client library for use with v2.0+ of the
+ RabbitMQ broker <http://www.rabbitmq.com>.
+ .
+ This package contains the development files for librabbitmq.
+
+Package: librabbitmq3
+Section: libs
+Architecture: any
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: RabbitMQ C AMQP client library
+ librabbitmq is a C-language client library for use with v2.0+ of the
+ RabbitMQ broker <http://www.rabbitmq.com>.
+
+Package: librabbitmq3-dbg
+Section: debug
+Architecture: any
+Pre-Depends: ${misc:Pre-Depends}
+Depends: librabbitmq3 (= ${binary:Version})
+Description: RabbitMQ C AMQP client library (debug)
+ librabbitmq is a C-language client library for use with v2.0+ of the
+ RabbitMQ broker <http://www.rabbitmq.com>.
+ .
+ This package contains the debugging symbols for librabbitmq.
