@@ -1,7 +1,7 @@
 Source: librabbitmq
 Priority: extra
 Maintainer: Alexander Klauer <Alexander.Klauer@itwm.fraunhofer.de>
-Build-Depends: debhelper (>= 8.0.0), cmake
+Build-Depends: debhelper (>= 8.0.0), cmake (>= 2.6), libssl-dev, libpopt-dev, xmlto
 Standards-Version: 3.9.3
 Section: libs
 Homepage: https://github.com/alanxz/rabbitmq-c
