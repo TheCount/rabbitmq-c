@@ -1,3 +1,9 @@
+librabbitmq (0.8.0-1ubuntu1) unstable; urgency=low
+
+  * Merged upstream changes
+
+ -- Alexander Klauer <Alexander.Klauer@itwm.fraunhofer.de>  Thu, 19 Nov 2015 10:03:10 +0100
+
 librabbitmq (0.5.0-1) unstable; urgency=low
 
   * Initial release
