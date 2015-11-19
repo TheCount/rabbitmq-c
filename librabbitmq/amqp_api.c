@@ -38,9 +38,15 @@
 #include "config.h"
 #endif
 
+#ifdef _MSC_VER
+/* MSVC complains about sprintf being deprecated in favor of sprintf_s */
+# define _CRT_SECURE_NO_WARNINGS
+/* MSVC complains about strdup being deprecated in favor of _strdup */
+# define _CRT_NONSTDC_NO_DEPRECATE
+#endif
+
 #include "amqp_private.h"
-#include "amqp_timer.h"
-#include <assert.h>
+#include "amqp_time.h"
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -72,7 +78,12 @@ static const char *base_error_strings[] = {
   "unexpected method received",         /* AMQP_STATUS_WRONG_METHOD             -0x000C */
   "request timed out",                  /* AMQP_STATUS_TIMEOUT                  -0x000D */
   "system timer has failed",            /* AMQP_STATUS_TIMER_FAILED             -0x000E */
-  "heartbeat timeout, connection closed"/* AMQP_STATUS_HEARTBEAT_TIMEOUT        -0x000F */
+  "heartbeat timeout, connection closed",/* AMQP_STATUS_HEARTBEAT_TIMEOUT       -0x000F */
+  "unexpected protocol state",          /* AMQP_STATUS_UNEXPECTED STATE         -0x0010 */
+  "socket is closed",                   /* AMQP_STATUS_SOCKET_CLOSED            -0x0011 */
+  "socket already open",                /* AMQP_STATUS_SOCKET_INUSE             -0x0012 */
+  "unsupported sasl method requested",  /* AMQP_STATUS_BROKER_UNSUPPORTED_SASL_METHOD -0x0013 */
+  "parameter value is unsupported"      /* AMQP_STATUS_UNSUPPORTED -0x0014 */
 };
 
 static const char *tcp_error_strings[] = {
@@ -159,11 +170,6 @@ const amqp_bytes_t amqp_empty_bytes = { 0, NULL };
 const amqp_table_t amqp_empty_table = { 0, NULL };
 const amqp_array_t amqp_empty_array = { 0, NULL };
 
-#define RPC_REPLY(replytype)\
-  (state->most_recent_api_result.reply_type == AMQP_RESPONSE_NORMAL\
-   ? (replytype *) state->most_recent_api_result.reply.decoded\
-   : NULL)
-
 int amqp_basic_publish(amqp_connection_state_t state,
                        amqp_channel_t channel,
                        amqp_bytes_t exchange,
@@ -187,23 +193,22 @@ int amqp_basic_publish(amqp_connection_state_t state,
   m.immediate = immediate;
   m.ticket = 0;
 
-  if (amqp_heartbeat_enabled(state)) {
-    uint64_t current_timestamp = amqp_get_monotonic_timestamp();
-    if (0 == current_timestamp) {
-      return AMQP_STATUS_TIMER_FAILURE;
-    }
-
-    if (current_timestamp > state->next_recv_heartbeat) {
-      res = amqp_try_recv(state, current_timestamp);
-      if (AMQP_STATUS_TIMEOUT == res) {
-        return AMQP_STATUS_HEARTBEAT_TIMEOUT;
-      } else if (AMQP_STATUS_OK != res) {
-        return res;
-      }
+  /* TODO(alanxz): this heartbeat check is happening in the wrong place, it
+   * should really be done in amqp_try_send/writev */
+  res = amqp_time_has_past(state->next_recv_heartbeat);
+  if (AMQP_STATUS_TIMER_FAILURE == res) {
+    return res;
+  } else if (AMQP_STATUS_TIMEOUT == res) {
+    res = amqp_try_recv(state);
+    if (AMQP_STATUS_TIMEOUT == res) {
+      return AMQP_STATUS_HEARTBEAT_TIMEOUT;
+    } else if (AMQP_STATUS_OK != res) {
+      return res;
     }
   }
 
-  res = amqp_send_method(state, channel, AMQP_BASIC_PUBLISH_METHOD, &m);
+  res = amqp_send_method_inner(state, channel, AMQP_BASIC_PUBLISH_METHOD, &m,
+                               AMQP_SF_MORE);
   if (res < 0) {
     return res;
   }
@@ -219,7 +224,7 @@ int amqp_basic_publish(amqp_connection_state_t state,
   f.payload.properties.body_size = body.len;
   f.payload.properties.decoded = (void *) properties;
 
-  res = amqp_send_frame(state, &f);
+  res = amqp_send_frame_inner(state, &f, AMQP_SF_MORE);
   if (res < 0) {
     return res;
   }
@@ -227,6 +232,7 @@ int amqp_basic_publish(amqp_connection_state_t state,
   body_offset = 0;
   while (body_offset < body.len) {
     size_t remaining = body.len - body_offset;
+    int flagz;
 
     if (remaining == 0) {
       break;
@@ -237,12 +243,14 @@ int amqp_basic_publish(amqp_connection_state_t state,
     f.payload.body_fragment.bytes = amqp_offset(body.bytes, body_offset);
     if (remaining >= usable_body_payload_size) {
       f.payload.body_fragment.len = usable_body_payload_size;
+      flagz = AMQP_SF_MORE;
     } else {
       f.payload.body_fragment.len = remaining;
+      flagz = AMQP_SF_NONE;
     }
 
     body_offset += f.payload.body_fragment.len;
-    res = amqp_send_frame(state, &f);
+    res = amqp_send_frame_inner(state, &f, flagz);
     if (res < 0) {
       return res;
     }

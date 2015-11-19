@@ -2,6 +2,11 @@
 cmake_minimum_required(VERSION 2.6)
 project(rabbitmq-c "C")
 
+# Enable MACOSX_RPATH by default. See: cmake --help-policy CMP0042
+if (POLICY CMP0042)
+  cmake_policy(SET CMP0042 NEW)
+endif()
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Follow all steps below in order to calculate new ABI version when updating the library
@@ -12,9 +17,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 # 3. If any interfaces have been added since the last public release, then increment age.
 # 4. If any interfaces have been removed since the last public release, then set age to 0.
 
-set(RMQ_SOVERSION_CURRENT   3)
-set(RMQ_SOVERSION_REVISION  0)
-set(RMQ_SOVERSION_AGE       2)
+set(RMQ_SOVERSION_CURRENT   5)
+set(RMQ_SOVERSION_REVISION  4)
+set(RMQ_SOVERSION_AGE       1)
 
 math(EXPR RMQ_SOVERSION_MAJOR "${RMQ_SOVERSION_CURRENT} - ${RMQ_SOVERSION_AGE}")
 math(EXPR RMQ_SOVERSION_MINOR "${RMQ_SOVERSION_AGE}")
@@ -36,8 +41,10 @@ set(VERSION ${_API_VERSION_MAJOR}.${_API_VERSION_MINOR}.${_API_VERSION_PATCH})
 
 if (MSVC)
   set(CMAKE_C_FLAGS "/W4 /nologo ${CMAKE_C_FLAGS}")
+elseif (CMAKE_C_COMPILER_ID MATCHES ".*Clang")
+  set(CMAKE_C_FLAGS "-Wall -Wextra -Wstrict-prototypes -Wno-unused-function -fno-common -fvisibility=hidden ${CMAKE_C_FLAGS}")
 elseif (CMAKE_COMPILER_IS_GNUCC)
-  set(RMQ_C_FLAGS "-Wall -Wextra -pedantic -Wstrict-prototypes -Wcast-align -Wno-unused-function -fno-common")
+  set(RMQ_C_FLAGS "-Wall -Wextra -Wstrict-prototypes -Wno-unused-function -fno-common")
   execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION)
   if (GCC_VERSION VERSION_GREATER 4.0 OR GCC_VERSION VERSION_EQUAL 4.0)
       set(RMQ_C_FLAGS "${RMQ_C_FLAGS} -fvisibility=hidden")
@@ -57,6 +64,17 @@ include(CheckSymbolExists)
 include(CheckLibraryExists)
 include(CMakePushCheckState)
 include(GNUInstallDirs)
+include(CheckCCompilerFlag)
+
+CHECK_C_COMPILER_FLAG("-std=gnu90" HAVE_GNU90)
+if (HAVE_GNU90)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu90")
+else()
+  CHECK_C_COMPILER_FLAG("-std=c90" HAVE_C90)
+  if (HAVE_C90)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c90")
+  endif()
+endif()
 
 # Detect if we need to link against a socket library:
 cmake_push_check_state()
@@ -103,12 +121,31 @@ set(CMAKE_REQUIRED_LIBRARIES ${SOCKET_LIBRARIES})
 if (WIN32)
   check_symbol_exists(htonll Winsock2.h HAVE_HTONLL)
 else (WIN32)
-  check_function_exists(htonll HAVE_HTONLL)
+  check_symbol_exists(htonll arpa/inet.h HAVE_HTONLL)
 endif (WIN32)
 cmake_pop_check_state()
 
+cmake_push_check_state()
+set(CMAKE_REQUIRED_INCLUDES "poll.h")
+check_function_exists(poll HAVE_POLL)
+set(CMAKE_REQUIRED_INCLUDES )
+if (NOT HAVE_POLL)
+  if (WIN32)
+    set(HAVE_SELECT 1)
+  else()
+    set(CMAKE_REQUIRED_INCLUDES sys/select.h)
+    check_function_exists(select HAVE_SELECT)
+    set(CMAKE_REQUIRED_INCLUDES )
+  endif()
+  if (NOT HAVE_SELECT)
+    message(FATAL_ERROR "rabbitmq-c requires poll() or select() to be available")
+  endif()
+endif()
+cmake_pop_check_state()
+
 check_library_exists(rt clock_gettime "time.h" CLOCK_GETTIME_NEEDS_LIBRT)
-if (CLOCK_GETTIME_NEEDS_LIBRT)
+check_library_exists(rt posix_spawnp "spawn.h" POSIX_SPAWNP_NEEDS_LIBRT)
+if (CLOCK_GETTIME_NEEDS_LIBRT OR POSIX_SPAWNP_NEEDS_LIBRT)
   set(LIBRT rt)
 endif()
 
@@ -198,7 +235,7 @@ if (REGENERATE_AMQP_FRAMING)
   find_path(AMQP_CODEGEN_DIR
     amqp_codegen.py
     PATHS ${CMAKE_CURRENT_SOURCE_DIR}/codegen
-          ${CMAKE_CURRENT_SOURCE_DIR}/rabbitmq-codegen 
+          ${CMAKE_CURRENT_SOURCE_DIR}/rabbitmq-codegen
           ${CMAKE_CURRENT_SOURCE_DIR}/../rabbitmq-codegen
           DOC "Path to directory containing amqp_codegen.py (rabbitmq-codegen)"
           NO_DEFAULT_PATH
@@ -222,7 +259,7 @@ endif()
 find_package(Threads)
 
 option(BUILD_SHARED_LIBS "Build rabbitmq-c as a shared library" ON)
-option(BUILD_STATIC_LIBS "Build rabbitmq-c as a static library" OFF)
+option(BUILD_STATIC_LIBS "Build rabbitmq-c as a static library" ON)
 
 option(BUILD_EXAMPLES "Build Examples" ON)
 option(BUILD_TOOLS "Build Tools (requires POPT Library)" ${POPT_FOUND})
@@ -232,33 +269,12 @@ option(BUILD_API_DOCS "Build Doxygen API docs" ${DOXYGEN_FOUND})
 option(ENABLE_SSL_SUPPORT "Enable SSL support" ON)
 option(ENABLE_THREAD_SAFETY "Enable thread safety when using OpenSSL" ${Threads_FOUND})
 
-set(SSL_ENGINE "OpenSSL" CACHE STRING "SSL Backend to use, valid options: OpenSSL, cyaSSL, GnuTLS, PolarSSL")
-mark_as_advanced(SSL_ENGINE)
-
 if (ENABLE_SSL_SUPPORT)
-  if (SSL_ENGINE STREQUAL "OpenSSL")
-    find_package(OpenSSL 0.9.8 REQUIRED)
-
-  elseif (SSL_ENGINE STREQUAL "cyaSSL")
-    find_package(cyaSSL REQUIRED)
-
-  elseif (SSL_ENGINE STREQUAL "GnuTLS")
-    find_package(GnuTLS REQUIRED)
-
-  elseif (SSL_ENGINE STREQUAL "PolarSSL")
-    find_package(PolarSSL REQUIRED)
-
-  else()
-    message(FATAL_ERROR "Unsupported SSL_ENGINE ${SSL_ENGINE}, valid engines: OpenSSL, cyaSSL, GnuTLS, or PolarSSL")
-  endif()
+  find_package(OpenSSL 0.9.8 REQUIRED)
 endif()
 
 if (NOT BUILD_SHARED_LIBS AND NOT BUILD_STATIC_LIBS)
     message(FATAL_ERROR "One or both of BUILD_SHARED_LIBS or BUILD_STATIC_LIBS must be set to ON to build")
-endif()
-
-if (WIN32 AND BUILD_STATIC_LIBS)
-  message(FATAL_ERROR "The rabbitmq-c library cannot be built as a static library on Win32. Set BUILD_STATIC_LIBS=OFF to get around this.")
 endif()
 
 add_subdirectory(librabbitmq)
@@ -276,6 +292,11 @@ if (BUILD_TOOLS)
 endif ()
 
 if (BUILD_TESTS)
+  if (NOT BUILD_STATIC_LIBS)
+    message(FATAL_ERROR
+      "Tests can only be built against static libraries "
+      "(set BUILD_STATIC_LIBS=ON)")
+  endif ()
   enable_testing()
   add_subdirectory(tests)
 endif (BUILD_TESTS)

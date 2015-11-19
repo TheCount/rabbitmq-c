@@ -1,4 +1,75 @@
 # Change Log
+## Changes since v0.7.0 (a.k.a., v0.7.1)
+- `41fa9df` Autoconf: add missing files in build system
+- `ef73c06` Win32: Use WSAEWOULDBLOCK instead of EWOULDBLOCK on Win32
+- `ceca348` CI: use travis-ci container based builds
+- `393e2df` Lib: if channel_max is 0 use server's channel_max
+- `ff47574` Lib: fix build on OpenBSD
+- `8429496...0ac6430` CI: enable CI on Mac OS X in travis-ci
+
+## Changes since v0.6.0 (a.k.a., v0.7.0)
+- `3379812` Tools: Add support for heartbeats
+- `d7029db` CI: Add continuous integration on Win32 using Appveyor
+- `a5f7ffb` Tests: only link against static libraries
+- `a16ad45...9cf7a3b`  Lib: add support for EXTERNAL SASL method
+- `038a9ed` Lib: fix incorrect parameters to WSAPoll on Win32
+- `a240c69...14ae307` Lib: use non-blocking sockets internally
+- `8d1d5cc`, `5498dc6` Lib: simplify timer/timeout logic
+- `61fc4e1` Lib: add support for heartbeat checks in blocking send calls
+- `f462c0f...3546a70` Lib: Fix warnings on Win32
+- `ba9d8ba...112a54d` Lib: Add support for RabbitMQ auth failure extension
+- `fb8e318` Lib: allow calling functions to override client-properties
+- `3ef3f5f` examples: replace usleep() with nanosleep()
+- `9027a94` Lib: add AMQP_VERSION code
+- `9ee1718` Lib: fix res maybe returned uninitialized in amqp_merge_capbilities
+- `22a36db` Lib: Fix SSL_connection status check
+- `abbefd4` Lib: Fix issues with c89 compatiblity
+- `2bc1f9b...816cbfc` Lib: perf improvements when sending small messages by
+  hinting to the OS message boundaries.
+- `be2e6dd...784a0e9` Lib: add select()-based timeout implementation
+- `91db548...8d77b4c` CI: add ubsan, asan, and tsan CI builds
+
+## Changes since v0.5.2 (a.k.a., v0.6.0)
+- `e1746f9` Tools: Enable support for SSL in tools.
+- `9626dd5` Lib: ABI CHANGE: enable support for auto_delete, internal flags to
+     amqp_exchange_declare
+- `ee54e27`, `656f833` Lib: check for double-close in SSL/TCP socket impl
+- `cf2760d` Lib: allocate struct when method has no field.
+- `513ad4a` Lib: add support for SANs in OpenSSL socket impl.
+- `5348c69` Lib: add functions to get negotiated frame_max and heartbeat parms.
+
+## Changes since v0.5.1 (a.k.a., v0.5.2)
+- `fcdf0f8` Autoconf: check for htonll as declaration in a header file
+- `5790ec7` SSL: correctly report hostname verification errors.
+- `d60c28c` Build: disable OpenSSL deprecation warnings on OSX
+- `072191a` Lib: include platform, version and copyright in AMQP handshake
+- `8b448c6` Examples: print message body in amqp[s]_listen[q] examples
+- `7188e5d` Tools: Add flag to set prefetch for amqp-consume tool
+
+## Changes since v0.5.0 (a.k.a., v0.5.1)
+### Enhancements:
+- `a566929` SSL: Add support for wildcards in hostname verification (Mike
+  Steinert)
+- `a78aa8a` Lib: Use poll(2) instead of select(2) for timeouts on sockets.
+- `357bdb3` Lib: support for specifying frame and decoding pool sizes. (Mike
+  Stitt)
+- `8956003` Lib: improve invalid frame detection code.
+
+### Bug fixes:
+- `b852f84` Lib: Add missing amqp_get_server_properties() function.
+- `7001e82` Lib: Add missing ssize_t on Win32 (emazv72)
+- `c2ce2cb` Lib: Correctly specify WINVER on Win32 when unspecified.
+- `fe844e4` CMake: specify -DHAVE_CONFIG_H in examples.
+- `932de5f` Lib: correct time computation on Win32 (jestor)
+- `3e83192` HPUX: use gethrtime on HP-UX for timers.
+- `cb1b44e` HPUX: correct include location of sys/uio.h
+- `8ce585d` Lib: incorrect OOM condition when 0-lenth exchange name is received.
+- `c7716b8` CMake: correct htonll detection code on platforms defined with a
+  macro.
+- `4dc4eda` Lib: remove unused assignment.
+- `45302cf` Lib: remove range-check of channel-ids.
+
+
 ## Changes since v0.4.1 (a.k.a., v0.5.0):
 ### Major changes:
 - Add amqp_get_broker_properties() function 5c7c40adc1

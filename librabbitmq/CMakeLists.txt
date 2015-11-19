@@ -80,33 +80,19 @@ if (ENABLE_SSL_SUPPORT)
   add_definitions(-DWITH_SSL=1)
   set(AMQP_SSL_SOCKET_H_PATH amqp_ssl_socket.h)
 
-  if (SSL_ENGINE STREQUAL "OpenSSL")
-    set(AMQP_SSL_SRCS ${AMQP_SSL_SOCKET_H_PATH}
-        amqp_openssl.c
-        amqp_hostcheck.c
-        amqp_hostcheck.h
-    )
-    include_directories(${OPENSSL_INCLUDE_DIR})
-    set(AMQP_SSL_LIBS ${OPENSSL_LIBRARIES})
-
-  elseif (SSL_ENGINE STREQUAL "cyaSSL")
-    set(AMQP_SSL_SRCS ${AMQP_SSL_SOCKET_H_PATH} amqp_cyassl.c)
-    include_directories(${CYASSL_INCLUDE_DIR})
-    set(AMQP_SSL_LIBS ${CYASSL_LIBRARIES})
-
-  elseif (SSL_ENGINE STREQUAL "GnuTLS")
-    set(AMQP_SSL_SRCS ${AMQP_SSL_SOCKET_H_PATH} amqp_gnutls.c)
-    include_directories(${GNUTLS_INCLUDE_DIR})
-    add_definitions(${GNUTLS_DEFINITIONS})
-    set(AMQP_SSL_LIBS ${GNUTLS_LIBRARIES})
-
-  elseif (SSL_ENGINE STREQUAL "PolarSSL")
-    set(AMQP_SSL_SRCS ${AMQP_SSL_SOCKET_H_PATH} amqp_polarssl.c)
-    include_directories(${POLARSSL_INCLUDE_DIR})
-    set(AMQP_SSL_LIBS ${POLARSSL_LIBRARIES})
-
-  else()
-    message(FATAL_ERROR "Unknown SSL_ENGINE ${SSL_ENGINE}")
+  set(AMQP_SSL_SRCS ${AMQP_SSL_SOCKET_H_PATH}
+      amqp_openssl.c
+      amqp_openssl_hostname_validation.c
+      amqp_openssl_hostname_validation.h
+      amqp_hostcheck.c
+      amqp_hostcheck.h
+  )
+  include_directories(${OPENSSL_INCLUDE_DIR})
+  set(AMQP_SSL_LIBS ${OPENSSL_LIBRARIES})
+  if (APPLE)
+    # Apple has deprecated OpenSSL in 10.7+. This disables that warning.
+    set_source_files_properties(${AMQP_SSL_SRCS}
+      PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
   endif()
 
   if (ENABLE_THREAD_SAFETY)
@@ -124,7 +110,7 @@ set(RABBITMQ_SOURCES
     ${AMQP_FRAMING_C_PATH}
     amqp_api.c amqp.h amqp_connection.c amqp_mem.c amqp_private.h amqp_socket.c
     amqp_table.c amqp_url.c amqp_socket.h amqp_tcp_socket.c amqp_tcp_socket.h
-    amqp_timer.c amqp_timer.h
+    amqp_time.c amqp_time.h
     amqp_consumer.c
     ${AMQP_SSL_SRCS}
 )

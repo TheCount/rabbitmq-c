@@ -34,59 +34,39 @@
  * ***** END LICENSE BLOCK *****
  */
 
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
-#include <stdint.h>
-#include <amqp_tcp_socket.h>
-#include <amqp.h>
-#include <amqp_framing.h>
+#include <amqp_socket.h>
 
-#include "utils.h"
-
-int main(int argc, char const *const *argv)
+static void parse_success(amqp_bytes_t mechanisms,
+                          amqp_sasl_method_enum method)
 {
-  char const *hostname;
-  int port, status;
-  char const *exchange;
-  char const *exchangetype;
-  amqp_socket_t *socket = NULL;
-  amqp_connection_state_t conn;
-
-  if (argc < 5) {
-    fprintf(stderr, "Usage: amqp_exchange_declare host port exchange exchangetype\n");
-    return 1;
+  if (!sasl_mechanism_in_list(mechanisms, method)) {
+    fprintf(stderr,
+            "Expected to find mechanism in list, but didn't: %s\n",
+            (char *)mechanisms.bytes);
+    abort();
   }
+}
 
-  hostname = argv[1];
-  port = atoi(argv[2]);
-  exchange = argv[3];
-  exchangetype = argv[4];
-
-  conn = amqp_new_connection();
-
-  socket = amqp_tcp_socket_new(conn);
-  if (!socket) {
-    die("creating TCP socket");
+static void parse_fail(amqp_bytes_t mechanisms,
+                       amqp_sasl_method_enum method)
+{
+  if (sasl_mechanism_in_list(mechanisms, method)) {
+    fprintf(stderr,
+            "Expected the mechanism not on the list, but it was present: %s\n",
+            (char *)mechanisms.bytes);
+    abort();
   }
+}
 
-  status = amqp_socket_open(socket, hostname, port);
-  if (status) {
-    die("opening TCP socket");
-  }
-
-  die_on_amqp_error(amqp_login(conn, "/", 0, 131072, 0, AMQP_SASL_METHOD_PLAIN, "guest", "guest"),
-                    "Logging in");
-  amqp_channel_open(conn, 1);
-  die_on_amqp_error(amqp_get_rpc_reply(conn), "Opening channel");
-
-  amqp_exchange_declare(conn, 1, amqp_cstring_bytes(exchange), amqp_cstring_bytes(exchangetype),
-                        0, 0, 0, 0, amqp_empty_table);
-  die_on_amqp_error(amqp_get_rpc_reply(conn), "Declaring exchange");
-
-  die_on_amqp_error(amqp_channel_close(conn, 1, AMQP_REPLY_SUCCESS), "Closing channel");
-  die_on_amqp_error(amqp_connection_close(conn, AMQP_REPLY_SUCCESS), "Closing connection");
-  die_on_error(amqp_destroy_connection(conn), "Ending connection");
+int main(void)
+{
+  parse_success(amqp_cstring_bytes("DIGEST-MD5 CRAM-MD5 LOGIN PLAIN"), AMQP_SASL_METHOD_PLAIN);
+  parse_fail(amqp_cstring_bytes("DIGEST-MD5 CRAM-MD5 LOGIN PLAIN"), AMQP_SASL_METHOD_EXTERNAL);
+  parse_success(amqp_cstring_bytes("DIGEST-MD5 CRAM-MD5 EXTERNAL"), AMQP_SASL_METHOD_EXTERNAL);
+  parse_fail(amqp_cstring_bytes("DIGEST-MD5 CRAM-MD5 EXTERNAL"), AMQP_SASL_METHOD_PLAIN);
   return 0;
 }

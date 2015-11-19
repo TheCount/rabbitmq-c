@@ -6,7 +6,7 @@
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MIT
  *
- * Portions created by Alan Antonuk are Copyright (c) 2012-2013
+ * Portions created by Alan Antonuk are Copyright (c) 2012-2014
  * Alan Antonuk. All Rights Reserved.
  *
  * Portions created by VMware are Copyright (c) 2007-2012 VMware, Inc.
@@ -41,6 +41,9 @@
 #include "config.h"
 #endif
 
+#define AMQ_COPYRIGHT "Copyright (c) 2007-2014 VMWare Inc, Tony Garnock-Jones," \
+                      " and Alan Antonuk."
+
 #include "amqp.h"
 #include "amqp_framing.h"
 #include <string.h>
@@ -61,7 +64,7 @@
 #endif
 
 /* GCC attributes */
-#if __GNUC__ > 2 | (__GNUC__ == 2 && __GNUC_MINOR__ > 4)
+#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ > 4)
 #define AMQP_NORETURN \
   __attribute__ ((__noreturn__))
 #define AMQP_UNUSED \
@@ -87,7 +90,7 @@ amqp_ssl_error_string(int err);
 #endif
 
 #include "amqp_socket.h"
-#include "amqp_timer.h"
+#include "amqp_time.h"
 
 /*
  * Connection states: XXX FIX THIS
@@ -118,6 +121,15 @@ typedef enum amqp_connection_state_enum_ {
   CONNECTION_STATE_BODY
 } amqp_connection_state_enum;
 
+typedef enum amqp_status_private_enum_
+{
+  /* 0x00xx -> AMQP_STATUS_*/
+  /* 0x01xx -> AMQP_STATUS_TCP_* */
+  /* 0x02xx -> AMQP_STATUS_SSL_* */
+  AMQP_PRIVATE_STATUS_SOCKET_NEEDREAD =  -0x1301,
+  AMQP_PRIVATE_STATUS_SOCKET_NEEDWRITE = -0x1302
+} amqp_status_private_enum;
+
 /* 7 bytes up front, then payload, then 1 byte footer */
 #define HEADER_SIZE 7
 #define FOOTER_SIZE 1
@@ -144,7 +156,13 @@ struct amqp_connection_state_t_ {
 
   int channel_max;
   int frame_max;
+
+  /* Heartbeat interval in seconds. If this is <= 0, then heartbeats are not
+   * enabled, and next_recv_heartbeat and next_send_heartbeat are set to
+   * infinite */
   int heartbeat;
+  amqp_time_t next_recv_heartbeat;
+  amqp_time_t next_send_heartbeat;
 
   /* buffer for holding frame headers.  Allows us to delay allocating
    * the raw frame buffer until the type, channel, and size are all known
@@ -168,32 +186,24 @@ struct amqp_connection_state_t_ {
 
   amqp_rpc_reply_t most_recent_api_result;
 
-  uint64_t next_recv_heartbeat;
-  uint64_t next_send_heartbeat;
-
   amqp_table_t server_properties;
+  amqp_table_t client_properties;
   amqp_pool_t properties_pool;
 };
 
 amqp_pool_t *amqp_get_or_create_channel_pool(amqp_connection_state_t connection, amqp_channel_t channel);
 amqp_pool_t *amqp_get_channel_pool(amqp_connection_state_t state, amqp_channel_t channel);
 
-static inline amqp_boolean_t amqp_heartbeat_enabled(amqp_connection_state_t state)
-{
-  return (state->heartbeat > 0);
+
+static inline int amqp_heartbeat_send(amqp_connection_state_t state) {
+  return state->heartbeat;
 }
 
-static inline uint64_t amqp_calc_next_send_heartbeat(amqp_connection_state_t state, uint64_t cur)
-{
-  return cur + ((uint64_t)state->heartbeat * AMQP_NS_PER_S);
+static inline int amqp_heartbeat_recv(amqp_connection_state_t state) {
+  return 2 * state->heartbeat;
 }
 
-static inline uint64_t amqp_calc_next_recv_heartbeat(amqp_connection_state_t state, uint64_t cur)
-{
-  return cur + ((uint64_t)state->heartbeat * 2 * AMQP_NS_PER_S);
-}
-
-int amqp_try_recv(amqp_connection_state_t state, uint64_t current_time);
+int amqp_try_recv(amqp_connection_state_t state);
 
 static inline void *amqp_offset(void *data, size_t offset)
 {
@@ -357,4 +367,8 @@ AMQP_NORETURN
 void
 amqp_abort(const char *fmt, ...);
 
+int amqp_bytes_equal(amqp_bytes_t r, amqp_bytes_t l);
+
+int amqp_send_frame_inner(amqp_connection_state_t state,
+                          const amqp_frame_t *frame, int flags);
 #endif

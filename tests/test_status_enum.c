@@ -1,16 +1,6 @@
 /* vim:set ft=c ts=2 sw=2 sts=2 et cindent: */
 /*
- * ***** BEGIN LICENSE BLOCK *****
- * Version: MIT
- *
- * Portions created by Alan Antonuk are Copyright (c) 2012-2013
- * Alan Antonuk. All Rights Reserved.
- *
- * Portions created by VMware are Copyright (c) 2007-2012 VMware, Inc.
- * All Rights Reserved.
- *
- * Portions created by Tony Garnock-Jones are Copyright (c) 2009-2010
- * VMware, Inc. and Tony Garnock-Jones. All Rights Reserved.
+ * Copyright 2015 Alan Antonuk
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,25 +21,35 @@
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- * ***** END LICENSE BLOCK *****
  */
 
-#include <stdint.h>
-#include <time.h>
-#include <sys/time.h>
-#include <unistd.h>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-uint64_t now_microseconds(void)
-{
-  struct timeval tv;
-  gettimeofday(&tv, NULL);
-  return (uint64_t) tv.tv_sec * 1000000 + (uint64_t) tv.tv_usec;
+#include "amqp.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static void check_errorstrings(amqp_status_enum start, amqp_status_enum end) {
+  int i;
+  for (i = start; i > end; --i) {
+    const char* err = amqp_error_string2(i);
+    if (0 == strcmp(err, "(unknown error)")) {
+      printf("amqp_status_enum value %s%X",
+             i < 0 ? "-" : "",
+             (unsigned)i);
+      abort();
+    }
+  }
 }
 
-void microsleep(int usec)
-{
-  struct timespec req;
-  req.tv_sec = 0;
-  req.tv_nsec = 1000 * usec;
-  nanosleep(&req, NULL);
+int main(void) {
+  check_errorstrings(AMQP_STATUS_OK, _AMQP_STATUS_NEXT_VALUE);
+  check_errorstrings(AMQP_STATUS_TCP_ERROR, _AMQP_STATUS_TCP_NEXT_VALUE);
+  check_errorstrings(AMQP_STATUS_SSL_ERROR, _AMQP_STATUS_SSL_NEXT_VALUE);
+
+  return 0;
 }

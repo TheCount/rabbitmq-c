@@ -38,6 +38,10 @@
 #include "config.h"
 #endif
 
+#ifdef _MSC_VER
+# define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "amqp_private.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -115,6 +119,8 @@ int amqp_parse_url(char *url, struct amqp_connection_info *parsed)
   char *start;
   char *host;
   char *port = NULL;
+
+  amqp_default_connection_info(parsed);
 
   /* check the prefix */
   if (!strncmp(url, "amqp://", 7)) {

@@ -33,30 +33,23 @@ librabbitmq_librabbitmq_la_SOURCES = \
 	librabbitmq/amqp_socket.c \
 	librabbitmq/amqp_socket.h \
 	librabbitmq/amqp_table.c \
+	librabbitmq/amqp_table.h \
 	librabbitmq/amqp_tcp_socket.c \
 	librabbitmq/amqp_tcp_socket.h \
-	librabbitmq/amqp_timer.c \
-	librabbitmq/amqp_timer.h \
+	librabbitmq/amqp_time.c \
+	librabbitmq/amqp_time.h \
 	librabbitmq/amqp_url.c
-
-
-if SSL_CYASSL
-librabbitmq_librabbitmq_la_SOURCES += librabbitmq/amqp_cyassl.c
-endif
-
-if SSL_GNUTLS
-librabbitmq_librabbitmq_la_SOURCES += librabbitmq/amqp_gnutls.c
-endif
 
 if SSL_OPENSSL
 librabbitmq_librabbitmq_la_SOURCES += \
   librabbitmq/amqp_hostcheck.c \
   librabbitmq/amqp_hostcheck.h \
-  librabbitmq/amqp_openssl.c
+  librabbitmq/amqp_openssl.c \
+  librabbitmq/amqp_openssl_hostname_validation.c \
+  librabbitmq/amqp_openssl_hostname_validation.h
+if OS_APPLE
+librabbitmq_librabbitmq_la_CFLAGS += -Wno-deprecated-declarations
 endif
-
-if SSL_POLARSSL
-librabbitmq_librabbitmq_la_SOURCES += librabbitmq/amqp_polarssl.c
 endif
 
 if OS_UNIX
@@ -75,19 +68,31 @@ endif
 check_PROGRAMS = \
 	tests/test_tables \
 	tests/test_parse_url \
-	tests/test_hostcheck
+	tests/test_hostcheck \
+	tests/test_status_enum \
+	tests/test_sasl_mechanism \
+	tests/test_merge_capabilities
 
 TESTS = $(check_PROGRAMS)
 
 tests_test_tables_SOURCES = tests/test_tables.c
-tests_test_tables_LDADD = librabbitmq/librabbitmq.la
+tests_test_tables_LDADD = librabbitmq/librabbitmq.a
 
 tests_test_parse_url_SOURCES = tests/test_parse_url.c
-tests_test_parse_url_LDADD = librabbitmq/librabbitmq.la
+tests_test_parse_url_LDADD = librabbitmq/librabbitmq.a
 
 tests_test_hostcheck_SOURCES = \
   tests/test_hostcheck.c \
 	librabbitmq/amqp_hostcheck.c
+
+tests_test_status_enum_SOURCES = tests/test_status_enum.c
+tests_test_status_enum_LDADD = librabbitmq/librabbitmq.a
+
+tests_test_sasl_mechanism_SOURCES = tests/test_sasl_mechanism.c
+tests_test_sasl_mechanism_LDADD = librabbitmq/librabbitmq.a
+
+tests_test_merge_capabilities_SOURCES = tests/test_merge_capabilities.c
+tests_test_merge_capabilities_LDADD = librabbitmq/librabbitmq.a
 
 noinst_LTLIBRARIES =
 
